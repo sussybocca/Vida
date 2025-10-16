@@ -17,12 +17,7 @@
   </style>
 </head>
 <body>
-  <div class="terminal" id="terminal"></div>
-  <div class="input-line">
-    <span>&gt;</span>
-    <input id="prompt" type="text" placeholder="Ask Via to generate code..." />
-    <button id="send">Send</button>
-  </div>
+  <div id="root"></div>
 
   <!-- React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -41,6 +36,7 @@
       const [loading, setLoading] = useState(false);
       const [generatedFile, setGeneratedFile] = useState(null);
       const terminalRef = useRef(null);
+      const inputRef = useRef(null);
 
       useEffect(() => {
         terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight, behavior: "smooth" });
@@ -48,12 +44,12 @@
       }, [messages]);
 
       const sendPrompt = async (prompt) => {
+        if (!prompt) return;
         setMessages(prev => [...prev, { role: "user", content: prompt }]);
         setLoading(true);
 
         try {
-          // Use Netlify environment variable injected at build time
-          const HF_KEY = import.meta.env.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;
+          const HF_KEY = "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"; // <-- put your Hugging Face key here
 
           const response = await fetch(
             "https://api-inference.huggingface.co/models/deepseek-ai/DeepSeek-R1",
@@ -66,26 +62,14 @@
               body: JSON.stringify({ inputs: prompt }),
             }
           );
+
           const data = await response.json();
+          console.log(data); // Debug API response
           const fullOutput = data?.generated_text || "// No output";
 
-          let i = 0;
-          const interval = setInterval(() => {
-            if (i <= fullOutput.length) {
-              setMessages(prev => [
-                ...prev.filter(m => m.role !== "via-temp"),
-                { role: "via-temp", content: fullOutput.slice(0, i) }
-              ]);
-              i++;
-            } else {
-              clearInterval(interval);
-              setMessages(prev => [
-                ...prev.filter(m => m.role !== "via-temp"),
-                { role: "via", content: fullOutput }
-              ]);
-              setGeneratedFile({ name: "generatedCode.js", content: fullOutput });
-            }
-          }, 20);
+          // Directly show full output
+          setMessages(prev => [...prev, { role: "via", content: fullOutput }]);
+          setGeneratedFile({ name: "generatedCode.js", content: fullOutput });
 
         } catch (err) {
           setMessages(prev => [...prev, { role: "via", content: "// Error generating code" }]);
@@ -93,6 +77,17 @@
         } finally {
           setLoading(false);
         }
+      };
+
+      const handleSend = () => {
+        const val = inputRef.current.value.trim();
+        if (!val) return;
+        sendPrompt(val);
+        inputRef.current.value = "";
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === "Enter") handleSend();
       };
 
       const downloadFile = () => {
@@ -105,14 +100,19 @@
       };
 
       return (
-        <div>
-          <div ref={terminalRef}>
+        <div style={{display:"flex", flexDirection:"column", height:"100%"}}>
+          <div className="terminal" ref={terminalRef}>
             {messages.map((msg, i) => (
               <div key={i} className={msg.role.startsWith("via") ? "via" : "user"}>
                 <strong>{msg.role.startsWith("via") ? "Via" : "You"}:</strong> {msg.content}
               </div>
             ))}
             {loading && <div className="via">Via is typing...</div>}
+          </div>
+          <div className="input-line">
+            <span>&gt;</span>
+            <input ref={inputRef} type="text" placeholder="Ask Via to generate code..." onKeyDown={handleKeyDown} />
+            <button onClick={handleSend}>Send</button>
           </div>
           {generatedFile && (
             <button className="download-btn" onClick={downloadFile}>
@@ -123,24 +123,7 @@
       );
     }
 
-    ReactDOM.render(<Vida />, document.getElementById("terminal"));
-
-    // Handle input
-    const input = document.getElementById("prompt");
-    const button = document.getElementById("send");
-    button.onclick = () => {
-      const val = input.value.trim();
-      if (!val) return;
-      const event = new Event('sendPromptEvent');
-      event.value = val;
-      window.dispatchEvent(event);
-      input.value = "";
-    };
-
-    window.addEventListener('sendPromptEvent', (e) => {
-      const vidaComponent = document.getElementById("terminal")._reactRootContainer._internalRoot.current.child.stateNode;
-      if (vidaComponent) vidaComponent.sendPrompt(e.value);
-    });
+    ReactDOM.render(<Vida />, document.getElementById("root"));
   </script>
 </body>
 </html>
