@@ -1,0 +1,9 @@
+body { font-family: monospace; background: #111; color: #eee; margin:0; padding:0; display:flex; flex-direction:column; height:100vh; }
+.terminal { flex:1; padding:10px; overflow-y:auto; background:#000; }
+.input-line { display:flex; padding:10px; background:#111; }
+.input-line span { color:#0f0; margin-right:5px; }
+input { flex:1; background:#111; color:#eee; border:none; outline:none; padding:5px; }
+button { background:#0f0; color:#000; border:none; cursor:pointer; padding:5px 10px; }
+.via { color:#0f0; }
+.user { color:#fff; }
+.download-btn { margin-top:5px; background:#0f0; color:#000; border:none; padding:5px 10px; cursor:pointer; }
