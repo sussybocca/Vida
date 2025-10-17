@@ -1,19 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ChatInput from "./ChatInput.jsx";
 import FileDownloadModal from "./FileDownloadModal.jsx";
 
 export default function Terminal() {
-  const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem("vidaChatHistory");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [messages, setMessages] = useState([]);
   const [generatedFile, setGeneratedFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const terminalRef = useRef(null);
 
   useEffect(() => {
     terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight, behavior: "smooth" });
-    localStorage.setItem("vidaChatHistory", JSON.stringify(messages));
   }, [messages]);
 
   const sendPrompt = async (prompt) => {
@@ -21,20 +17,13 @@ export default function Terminal() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "https://api-inference.huggingface.co/models/deepseek-ai/DeepSeek-R1",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${import.meta.env.VITE_HUGGINGFACE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ inputs: prompt }),
-        }
-      );
-
+      const response = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
       const data = await response.json();
-      const fullOutput = data?.generated_text || "// No output";
+      const fullOutput = data.output || "// No output";
 
       let i = 0;
       const interval = setInterval(() => {
@@ -53,7 +42,6 @@ export default function Terminal() {
           setGeneratedFile({ name: "generatedCode.js", content: fullOutput });
         }
       }, 20);
-
     } catch (err) {
       setMessages(prev => [...prev, { role: "via", content: "// Error generating code" }]);
       console.error(err);
@@ -62,19 +50,31 @@ export default function Terminal() {
     }
   };
 
+  const downloadFile = () => {
+    if (!generatedFile) return;
+    const blob = new Blob([generatedFile.content], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = generatedFile.name;
+    link.click();
+  };
+
   return (
-    <div className="flex flex-col h-screen p-4 max-w-md mx-auto bg-gray-900">
-      <div ref={terminalRef} className="flex-1 overflow-y-auto p-4 rounded-lg bg-black shadow-inner mb-2 terminal-window">
+    <div style={{ padding: "10px" }}>
+      <div ref={terminalRef} className="terminal">
         {messages.map((msg, i) => (
-          <div key={i} className={`mb-2 ${msg.role.startsWith("via") ? "text-green-400" : "text-white"}`}>
-            <span className="font-bold">{msg.role.startsWith("via") ? "Via" : "You"}: </span>
-            <span>{msg.content}</span>
+          <div key={i} className={msg.role.startsWith("via") ? "via" : "user"}>
+            <strong>{msg.role.startsWith("via") ? "Via" : "You"}:</strong> {msg.content}
           </div>
         ))}
-        {loading && <div className="text-green-400 italic">Via is typing...</div>}
+        {loading && <div className="via">Via is typing...</div>}
       </div>
       <ChatInput onSend={sendPrompt} />
-      {generatedFile && <FileDownloadModal file={generatedFile} />}
+      {generatedFile && (
+        <button className="download-btn" onClick={downloadFile}>
+          Download {generatedFile.name}
+        </button>
+      )}
     </div>
   );
 }

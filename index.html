@@ -49,28 +49,23 @@
         setLoading(true);
 
         try {
-          const HF_KEY = "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"; // <-- put your Hugging Face key here
+          const HF_KEY = "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"; // <-- put your Hugging Face key here
 
           const response = await fetch(
-            "https://router.huggingface.co/v1/chat/completions",
+            "https://api-inference.huggingface.co/models/deepseek-ai/DeepSeek-R1",
             {
               method: "POST",
               headers: {
                 "Authorization": `Bearer ${HF_KEY}`,
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({
-                model: "deepseek-ai/DeepSeek-R1:novita",
-                messages: [{ role: "user", content: prompt }],
-                stream: false
-              }),
+              body: JSON.stringify({ inputs: prompt }),
             }
           );
 
           const data = await response.json();
           console.log(data); // Debug API response
-
-          const fullOutput = data?.choices?.[0]?.message?.content || "// No output";
+          const fullOutput = data?.generated_text || "// No output";
 
           // Directly show full output
           setMessages(prev => [...prev, { role: "via", content: fullOutput }]);

@@ -1,5 +1,9 @@
+import React from "react";
+
 export default function FileDownloadModal({ file }) {
-  const downloadFile = () => {
+  if (!file) return null;
+
+  const download = () => {
     const blob = new Blob([file.content], { type: "text/plain" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -7,15 +11,5 @@ export default function FileDownloadModal({ file }) {
     link.click();
   };
 
-  return (
-    <div className="mt-2 p-2 bg-gray-800 rounded flex justify-between items-center shadow-md">
-      <span>{file.name} ready</span>
-      <button
-        className="bg-green-500 text-black px-2 py-1 rounded hover:bg-green-600"
-        onClick={downloadFile}
-      >
-        Download
-      </button>
-    </div>
-  );
+  return <button className="download-btn" onClick={download}>Download {file.name}</button>;
 }
